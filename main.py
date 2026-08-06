@@ -1,66 +1,56 @@
-from pywinauto import Desktop
+# excel 資料排序
+from openpyxl import load_workbook
+from collections import Counter
 
-# 列出目前所有可見視窗
-for window in Desktop(backend="uia").windows():
-    try:
-        print(repr(window.window_text()))
-    except Exception:
-        pass
+wb = load_workbook('python.xlsx')
+ws = wb.active
+
+rows = [
+    row
+    for row in ws.iter_rows(values_only = True)
+    if row[1] is not None
+]
+'''
+# 串列式生成
+rows = []
+
+for row in ws.iter_rows(values_only=True):
+    if row[1] is not None:
+        rows.append(list(row))
+
+'''
+
+
+result = Counter(row[1] for row in rows)
+
+order = {
+    fruit: index
+    for index, (fruit, _) in enumerate(result.most_common())
+}
 
 """
-#-----------------------------------
-# 列出特定視窗的所有可辨識控制項
-from pywinauto import Desktop
+order = {}
 
-window = Desktop(backend="uia").window(
-    title_re=".*公司程式名稱.*"
-)
+for index, item in enumerate(result.most_common()):
+    fruit = item[0]
+    count = item[1]
 
-window.wait("visible", timeout=10)
-window.set_focus()
-
-# 將所有可辨識的按鈕、輸入框、表格列出
-window.print_control_identifiers()
-
-#可能輸出項目
-Button - '查詢'
-Edit - '客戶編號'
-DataGrid - '查詢結果'
-
-#-----------------------------------
-#輸入客戶編號並點擊查詢
-from pywinauto import Desktop
-
-window = Desktop(backend="uia").window(
-    title_re=".*公司程式名稱.*"
-)
-window.wait("visible enabled ready", timeout=15)
-
-# 輸入客戶編號
-customer_field = window.child_window(
-    title="客戶編號",
-    control_type="Edit"
-)
-customer_field.set_edit_text("A123456")
-
-# 點擊查詢
-search_button = window.child_window(
-    title="查詢",
-    control_type="Button"
-)
-search_button.click_input()
-
-#-----------------------------------
-# 如果控制項有 auto_id
-window.child_window(
-    auto_id="txtCustomerNo",
-    control_type="Edit"
-).set_edit_text("A123456")
-
-window.child_window(
-    auto_id="btnSearch",
-    control_type="Button"
-).click_input()
-#-------------------------------
-# 如果 backend="uia" 看不到控制項，可以改用 backend="win32"
+    order[fruit] = index
 """
+
+rows.sort(key = lambda row: order[row[1]])
+
+"""
+# lamba row: order[row[1]] 
+def get_order(row):
+    fruit = row[1]
+    return order[fruit]
+"""
+
+for row_number, row_data in enumerate(rows, start = 1):
+    for column_number, value in enumerate(row_data, start = 1):
+        ws.cell(row = row_number, column = column_number, value = value)
+
+wb.save('python.xlsx')
+
+print(result)
